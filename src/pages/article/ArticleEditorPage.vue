@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router'
 
 import { ARTICLE_STATUS_BADGE_VARIANT_MAP, ARTICLE_STATUS_LABEL_MAP } from '@/entities/article/model/article.constants'
-import { mapArticleDetailDtoToVm, mapArticleDetailVmToCardVm } from '@/entities/article/model/article.mapper'
+import { mapArticleDetailVmToCardVm } from '@/entities/article/model/article.mapper'
 import type { ArticleCardVm } from '@/entities/article/model/article.types'
 import type { UserProfileVm } from '@/entities/user'
 import { cancelReviewByArticleId } from '@/features/article-cancel-review'
@@ -15,18 +15,15 @@ import {
   type EditorFormValues,
 } from '@/features/article-editor'
 import { submitArticleById } from '@/features/article-submit'
-import { articleApi } from '@/shared/api/modules/article'
 import { queryKeys } from '@/shared/api/queryKeys'
 import { useToast } from '@/shared/composables/useToast'
 import { Icon } from '@/shared/components/base'
 import { ARTICLE_STATUS } from '@/shared/constants/article'
 import { ROUTE_NAME } from '@/shared/constants/routes'
-import { STORAGE_KEY } from '@/shared/constants/storage'
 import { queryClient } from '@/shared/lib/queryClient'
 import { setDocumentTitle } from '@/shared/utils/documentTitle'
 import { normalizeBackendDateTime } from '@/shared/utils/dateTime'
 import { getErrorMessage } from '@/shared/utils/error'
-import { localStore } from '@/shared/utils/storage'
 import { calcWordCount, canCancelReview, canEditArticle, canSubmitArticle } from '@/shared/utils/article'
 import { useDraftStore } from '@/stores/draft'
 import { useEditorStore } from '@/stores/editor'
@@ -36,7 +33,6 @@ const router = useRouter()
 const editorStore = useEditorStore()
 const draftStore = useDraftStore()
 const toast = useToast()
-const PUBLISH_COOLDOWN_MS = 30 * 60 * 1000
 const MIN_SUBMIT_CONTENT_LENGTH = 50
 
 const pageError = ref('')
@@ -78,28 +74,6 @@ const nowTimestamp = ref(Date.now())
 const publishCooldownUntil = ref(0)
 const mainActionSlotWidth = ref<number | null>(null)
 
-function getPublishCooldownStorageKey(id: string) {
-  return `${STORAGE_KEY.ARTICLE_PUBLISH_COOLDOWN_PREFIX}${id}`
-}
-
-function readPersistedPublishCooldownUntil(id: string): number {
-  if (!id || !localStore) return 0
-
-  const stored = localStore.get<number>(getPublishCooldownStorageKey(id), 0)
-  return typeof stored === 'number' && Number.isFinite(stored) ? stored : 0
-}
-
-function persistPublishCooldownUntil(id: string, until: number) {
-  if (!id || !localStore) return
-
-  if (until > Date.now()) {
-    localStore.set<number>(getPublishCooldownStorageKey(id), until)
-    return
-  }
-
-  localStore.remove(getPublishCooldownStorageKey(id))
-}
-
 let publishConfirmTimer: ReturnType<typeof setTimeout> | null = null
 let cancelConfirmTimer: ReturnType<typeof setTimeout> | null = null
 let publishCooldownRevealTimer: ReturnType<typeof setTimeout> | null = null
@@ -138,56 +112,48 @@ function parseLocalDateTime(value?: string | null): number {
   return Number.isNaN(parsed) ? 0 : parsed
 }
 
-function parseCooldownUntilFromErrorDetails(error: unknown): number {
-  if (!error || typeof error !== 'object' || !('details' in error)) return 0
+function parseRetryAfterTimestamp(value?: string | null): number {
+  const trimmed = value?.trim()
+  if (!trimmed) return 0
 
-  const details = (error as { details?: unknown }).details
-  if (!details || typeof details !== 'object') return 0
-
-  const nextSubmitAt = 'nextSubmitAt' in details ? (details as { nextSubmitAt?: string | null }).nextSubmitAt : null
-  const remainingSeconds = 'remainingSeconds' in details
-    ? (details as { remainingSeconds?: number | string | null }).remainingSeconds
-    : null
-
-  const nextSubmitAtTimestamp = parseLocalDateTime(nextSubmitAt)
-  if (nextSubmitAtTimestamp) {
-    return nextSubmitAtTimestamp
+  const seconds = Number(trimmed)
+  if (Number.isFinite(seconds) && seconds >= 0) {
+    return Date.now() + Math.ceil(seconds * 1000)
   }
 
-  const numericRemainingSeconds = typeof remainingSeconds === 'number'
-    ? remainingSeconds
-    : typeof remainingSeconds === 'string'
-      ? Number(remainingSeconds)
-      : 0
-
-  if (!Number.isFinite(numericRemainingSeconds) || numericRemainingSeconds <= 0) {
-    return 0
-  }
-
-  return Date.now() + numericRemainingSeconds * 1000
+  const timestamp = Date.parse(trimmed)
+  return Number.isNaN(timestamp) ? 0 : timestamp
 }
 
-const lastSubmittedAtTimestamp = computed(() => {
-  const raw = currentRouteArticle.value?.lastSubmittedAtRaw
-  if (!raw) return 0
+function parseCooldownUntilFromErrorDetails(error: unknown): number {
+  if (!error || typeof error !== 'object') return 0
 
-  const parsed = parseLocalDateTime(raw)
-  if (!parsed) return 0
+  const candidate = error as {
+    code?: number
+    status?: number
+    retryAfter?: string
+    details?: unknown
+  }
+  if (candidate.status !== 429 && candidate.code !== 429) return 0
 
-  // Guard against server/client clock skew or over-precise timestamps parsing slightly ahead.
-  return Math.min(parsed, Date.now())
-})
-const publishCooldownRemainingMs = computed(() => {
-  const localRemaining = Math.max(0, publishCooldownUntil.value - nowTimestamp.value)
-  if (!showPublishAction.value) return localRemaining
+  const details = candidate.details
+  if (details && typeof details === 'object') {
+    const nextSubmitAt = 'nextSubmitAt' in details
+      ? (details as { nextSubmitAt?: string | null }).nextSubmitAt
+      : null
+    const nextSubmitAtTimestamp = parseLocalDateTime(nextSubmitAt)
+    if (nextSubmitAtTimestamp > Date.now()) {
+      return nextSubmitAtTimestamp
+    }
+  }
 
-  const baseTimestamp = lastSubmittedAtTimestamp.value
-  const baseRemaining = baseTimestamp
-    ? Math.max(0, baseTimestamp + PUBLISH_COOLDOWN_MS - nowTimestamp.value)
-    : 0
+  const retryAfterTimestamp = parseRetryAfterTimestamp(candidate.retryAfter)
+  return retryAfterTimestamp > Date.now() ? retryAfterTimestamp : 0
+}
 
-  return Math.max(localRemaining, baseRemaining)
-})
+const publishCooldownRemainingMs = computed(() =>
+  Math.max(0, publishCooldownUntil.value - nowTimestamp.value),
+)
 const isPublishCooldownActive = computed(() => publishCooldownRemainingMs.value > 0)
 const publishCooldownText = computed(() => {
   if (!isPublishCooldownActive.value) return ''
@@ -200,7 +166,7 @@ const publishButtonDisabled = computed(
 )
 const publishButtonTitle = computed(() => {
   if (isPublishCooldownActive.value && publishCooldownRevealed.value) {
-    return `同一篇文章 30 分钟内只能发布一次，${publishCooldownText.value}`
+    return `服务端暂时限制再次提交，${publishCooldownText.value}`
   }
 
   if (publishConfirming.value && !hasEnoughContentToSubmit.value) {
@@ -642,11 +608,14 @@ async function submitArticle() {
   editorStore.submitting = true
 
   try {
-    const result = await submitArticleById(article.id)
-    const submittedAt = parseLocalDateTime(result.lastSubmittedAt)
-    const cooldownUntil = (submittedAt || Date.now()) + PUBLISH_COOLDOWN_MS
+    const result = await submitArticleById(article.id, {
+      expectedVersion: article.version,
+      requireSubmissionId: article.version !== null,
+    })
     const nextArticle = {
       ...article,
+      version: result.version ?? article.version,
+      submissionId: result.submissionId ?? article.submissionId,
       status: {
         value: ARTICLE_STATUS.PENDING,
         label: ARTICLE_STATUS_LABEL_MAP.PENDING,
@@ -659,10 +628,9 @@ async function submitArticle() {
       lastSubmittedAtRaw: result.lastSubmittedAt,
     }
 
-    publishCooldownUntil.value = cooldownUntil
-    persistPublishCooldownUntil(String(article.id), cooldownUntil)
+    publishCooldownUntil.value = 0
 
-    editorStore.setCurrentArticle(nextArticle)
+    editorStore.setCurrentArticle(nextArticle, result.updatedAt ?? result.lastSubmittedAt)
     queryClient.setQueryData(queryKeys.articleDetail(article.id), nextArticle)
     const draftStoreSynced = draftStore.updateStatusById(
       article.id,
@@ -694,21 +662,9 @@ async function submitArticle() {
 
   } catch (error) {
     const message = getErrorMessage(error, '提交失败，请稍后重试')
-    if (
-      /30\s*(分钟)/.test(message)
-    ) {
-      const backendCooldownUntil = parseCooldownUntilFromErrorDetails(error)
-      const persistedUntil = readPersistedPublishCooldownUntil(String(article.id))
-      const candidates = [
-        persistedUntil > Date.now() ? persistedUntil : 0,
-        backendCooldownUntil > Date.now() ? backendCooldownUntil : 0,
-      ].filter((value) => value > 0)
-      const nextCooldownUntil = candidates.length
-        ? Math.max(...candidates)
-        : Date.now() + PUBLISH_COOLDOWN_MS
-
-      publishCooldownUntil.value = nextCooldownUntil
-      persistPublishCooldownUntil(String(article.id), nextCooldownUntil)
+    const backendCooldownUntil = parseCooldownUntilFromErrorDetails(error)
+    if (backendCooldownUntil > Date.now()) {
+      publishCooldownUntil.value = backendCooldownUntil
       resetPublishConfirm()
     }
     submitError.value = message
@@ -725,10 +681,24 @@ async function cancelReview() {
   editorStore.submitting = true
 
   try {
-    await cancelReviewByArticleId(article.id)
-    const detail = await articleApi.getArticleDetail(article.id)
-    const nextArticle = mapArticleDetailDtoToVm(detail)
-    editorStore.setCurrentArticle(nextArticle)
+    const result = await cancelReviewByArticleId(article.id, {
+      expectedVersion: article.version,
+      expectedSubmissionId: article.submissionId,
+    })
+    const nextStatus = result.status?.toUpperCase?.() || result.status
+    const nextArticle = {
+      ...article,
+      version: result.version ?? article.version,
+      submissionId: result.submissionId ?? article.submissionId,
+      status: {
+        value: nextStatus,
+        label: ARTICLE_STATUS_LABEL_MAP[nextStatus as keyof typeof ARTICLE_STATUS_LABEL_MAP] ?? nextStatus,
+        variant: ARTICLE_STATUS_BADGE_VARIANT_MAP[
+          nextStatus as keyof typeof ARTICLE_STATUS_BADGE_VARIANT_MAP
+        ] ?? 'default',
+      },
+    }
+    editorStore.setCurrentArticle(nextArticle, result.updatedAt ?? '')
     queryClient.setQueryData(queryKeys.articleDetail(article.id), nextArticle)
     void queryClient.invalidateQueries({
       queryKey: queryKeys.reviewPendingRoot,
@@ -743,7 +713,7 @@ async function cancelReview() {
       })
     }
 
-    await onCanceled()
+    onCanceled()
   } catch (error) {
     const message = getErrorMessage(error, '取消审核失败，请稍后重试')
     toast.error(message)
@@ -752,15 +722,14 @@ async function cancelReview() {
   }
 }
 
-async function onCanceled() {
+function onCanceled() {
   pageError.value = ''
   submitError.value = ''
   resetPublishConfirm()
   resetCancelConfirm()
   setSaveFeedback('idle')
 
-  if (!articleId.value) return
-  await editorStore.loadArticleDetail(articleId.value, true)
+  publishCooldownUntil.value = 0
 }
 
 onBeforeRouteLeave(async () => {
@@ -840,9 +809,7 @@ watch(
 
 watch(articleId, () => {
   lastManualSavedAt.value = ''
-  publishCooldownUntil.value = articleId.value
-    ? readPersistedPublishCooldownUntil(articleId.value)
-    : 0
+  publishCooldownUntil.value = 0
 }, { immediate: true })
 
 watch(
@@ -853,43 +820,28 @@ watch(
 )
 
 watch(
-  () => [showPublishAction.value, lastSubmittedAtTimestamp.value, publishCooldownUntil.value] as const,
-  ([canShowPublish, submittedAt]) => {
+  () => [showPublishAction.value, publishCooldownUntil.value] as const,
+  ([canShowPublish, cooldownUntil]) => {
     clearPublishCooldownTimer()
 
-    const cooldownBase = submittedAt || publishCooldownUntil.value
-
-    if (!canShowPublish || !cooldownBase) {
+    if (!canShowPublish || !cooldownUntil) {
       return
     }
 
     nowTimestamp.value = Date.now()
-
-    const cooldownEnd = submittedAt ? cooldownBase + PUBLISH_COOLDOWN_MS : cooldownBase
-
-    if (cooldownEnd <= nowTimestamp.value) {
+    if (cooldownUntil <= nowTimestamp.value) {
+      publishCooldownUntil.value = 0
       return
     }
 
     publishCooldownTimer = setInterval(() => {
       nowTimestamp.value = Date.now()
 
-      if (cooldownEnd <= nowTimestamp.value) {
-        if (articleId.value) {
-          persistPublishCooldownUntil(articleId.value, 0)
-        }
+      if (cooldownUntil <= nowTimestamp.value) {
+        publishCooldownUntil.value = 0
         clearPublishCooldownTimer()
       }
     }, 1000)
-  },
-  { immediate: true },
-)
-
-watch(
-  lastSubmittedAtTimestamp,
-  (value) => {
-    if (!articleId.value || !value) return
-    persistPublishCooldownUntil(articleId.value, value + PUBLISH_COOLDOWN_MS)
   },
   { immediate: true },
 )

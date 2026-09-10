@@ -88,6 +88,8 @@ export interface ArticleCardVm {
 
 export interface ArticleDetailVm {
     id: number
+    version: number | null
+    submissionId: string | null
     title: string
     rawTitle: string | null
     content: string

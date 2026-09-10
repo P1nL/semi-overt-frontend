@@ -76,6 +76,7 @@ async function onActed(result: ReviewActionResult) {
     const nextStatus = result.status?.toUpperCase?.() || result.status
     article.value = {
       ...article.value,
+      version: result.version ?? article.value.version,
       status: {
         value: nextStatus,
         label:
@@ -250,6 +251,9 @@ function onLoaded(value: ArticleDetailVm) {
             :article-id="articleId"
             :author-username="article?.author?.username"
             :assigned-admin-id="article?.assignedAdminId"
+            :article-version="article?.version"
+            :submission-id="article?.submissionId"
+            :submit-count="article?.submitCount"
             :status="article?.status?.value"
             @acted="onActed"
           />

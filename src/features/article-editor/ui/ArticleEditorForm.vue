@@ -492,9 +492,13 @@ async function persistDraft(
     const { articleId, created } = await ensureArticleId()
     editorStore.setSummaryIntentionallyEmpty(articleId, submittedValues.summary.trim().length === 0)
 
+    const currentVersion = editorStore.currentArticle
+      && String(editorStore.currentArticle.id) === String(articleId)
+      ? editorStore.currentArticle.version
+      : null
     const response = await articleApi.saveDraft(
       articleId,
-      mapEditorFormToDraftPayload(submittedValues),
+      mapEditorFormToDraftPayload(submittedValues, currentVersion),
     )
     const submittedStats = buildEditorStats(submittedValues.content, submittedValues.title)
     const hasNewerChanges = hasFormDifferences(submittedValues)
@@ -522,6 +526,7 @@ async function persistDraft(
 
     const payload: EditorDraftSavedPayload = {
       savedAt: response.savedAt,
+      version: savedArticle.version,
       wordCount: submittedStats.wordCount,
       readMinutes: submittedStats.readMinutes,
       durationCategory: submittedStats.durationCategory,

@@ -1,7 +1,7 @@
 import { ARTICLE_STATUS } from '@/shared/constants/article'
 import { REVIEW_REASON_MAX_LENGTH } from '@/shared/constants/review'
-import { reviewApi } from '@/shared/api/modules/review'
 import { requiresReviewReason } from '@/shared/utils/review'
+import { executeReviewDecision, type ReviewDecisionContext } from './review-decision'
 import type {
     ReviewActionFormValues,
     ReviewActionResult,
@@ -38,12 +38,13 @@ export function validateReviewActionForm(values: ReviewActionFormValues): Review
 export async function submitReviewActionByArticleId(
     articleId: number | string,
     values: ReviewActionFormValues,
+    context: ReviewDecisionContext = {},
 ): Promise<ReviewActionResult> {
-    return reviewApi.submitReviewAction(articleId, {
-        action: values.action,
-        reason: values.reason.trim() || undefined,
-    })
+    return executeReviewDecision(articleId, values, context)
 }
+
+export { REVIEW_DECISION_POLL_DELAYS_MS } from './review-decision'
+export type { ReviewDecisionContext } from './review-decision'
 
 export type {
     ReviewActionFieldErrors,

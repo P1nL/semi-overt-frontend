@@ -54,12 +54,18 @@ const props = withDefaults(
     status?: string | null
     authorUsername?: string | null
     assignedAdminId?: number | string | null
+    submissionId?: string | null
+    articleVersion?: number | null
+    submitCount?: number | null
     disabled?: boolean
   }>(),
   {
     status: null,
     authorUsername: null,
     assignedAdminId: null,
+    submissionId: null,
+    articleVersion: null,
+    submitCount: null,
     disabled: false,
   },
 )
@@ -310,10 +316,19 @@ async function submitAction(action: ReviewActionValue) {
   acting.value = true
 
   try {
-    const result = await submitReviewActionByArticleId(props.articleId, {
-      action,
-      reason,
-    })
+    const result = await submitReviewActionByArticleId(
+      props.articleId,
+      {
+        action,
+        reason,
+      },
+      {
+        submissionId: props.submissionId,
+        articleVersion: props.articleVersion,
+        submitCount: props.submitCount,
+        userId: currentAdminId.value,
+      },
+    )
     const nextStatus = result.status?.toUpperCase?.() || result.status
 
     // 使用 String() 确保 key 类型与 useArticleDetailQuery 中的 String(toValue(articleId)) 一致
@@ -326,6 +341,7 @@ async function submitAction(action: ReviewActionValue) {
 
       return {
         ...current,
+        version: result.version ?? ('version' in current ? current.version : null),
         status: {
           value: nextStatus,
           label:

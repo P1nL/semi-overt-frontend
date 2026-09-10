@@ -10,13 +10,20 @@ export class ApiBusinessError extends Error {
     code: number
     details?: unknown
     status?: number
+    retryAfter?: string
 
-    constructor(message: string, options?: { code?: number; details?: unknown; status?: number }) {
+    constructor(message: string, options?: {
+        code?: number
+        details?: unknown
+        status?: number
+        retryAfter?: string
+    }) {
         super(message)
         this.name = 'ApiBusinessError'
         this.code = options?.code ?? -1
         this.details = options?.details
         this.status = options?.status
+        this.retryAfter = options?.retryAfter
     }
 }
 

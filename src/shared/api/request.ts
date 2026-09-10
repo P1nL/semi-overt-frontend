@@ -48,6 +48,25 @@ async function requestAndUnwrap<T>(
     })
 }
 
+export function getRawResponse<T>(
+    url: string,
+    params?: RequestParams,
+    config?: RequestConfig,
+): Promise<AxiosResponse<ApiResponse<T>>> {
+    return http.get<ApiResponse<T>>(url, {
+        ...mergeConfig(config),
+        params,
+    })
+}
+
+export function postRawResponse<T>(
+    url: string,
+    data?: RequestData,
+    config?: RequestConfig,
+): Promise<AxiosResponse<ApiResponse<T>>> {
+    return http.post<ApiResponse<T>>(url, data, mergeConfig(config))
+}
+
 export async function get<T>(
     url: string,
     params?: RequestParams,
@@ -124,6 +143,8 @@ export async function upload<T>(
 export const request = {
     get,
     post,
+    getRawResponse,
+    postRawResponse,
     put,
     patch,
     delete: del,

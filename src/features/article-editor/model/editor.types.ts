@@ -25,6 +25,7 @@ export interface EditorValidationResult {
 
 export interface EditorDraftSavedPayload {
     savedAt: string
+    version: number | null
     wordCount: number
     readMinutes: number
     durationCategory: string

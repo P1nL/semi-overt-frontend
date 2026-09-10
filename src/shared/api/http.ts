@@ -80,9 +80,23 @@ function getResponseMessage(error: AxiosError): string {
     return error.message || '请求失败'
 }
 
+function getRetryAfterHeader(error: AxiosError): string | undefined {
+    const headers = error.response?.headers
+    if (!headers) return undefined
+
+    const value = typeof headers.get === 'function'
+        ? headers.get('retry-after')
+        : (headers as Record<string, unknown>)['retry-after']
+
+    if (typeof value === 'string' && value.trim()) return value.trim()
+    if (typeof value === 'number' && Number.isFinite(value)) return String(value)
+    return undefined
+}
+
 function createHttpError(error: AxiosError): ApiBusinessError {
     const status = error.response?.status
     const payload = error.response?.data
+    const retryAfter = getRetryAfterHeader(error)
 
     if (payload && typeof payload === 'object') {
         const maybePayload = payload as Record<string, unknown>
@@ -96,6 +110,7 @@ function createHttpError(error: AxiosError): ApiBusinessError {
             code,
             status,
             details: maybePayload.data ?? payload,
+            retryAfter,
         })
     }
 
@@ -118,6 +133,7 @@ function createHttpError(error: AxiosError): ApiBusinessError {
         code: status ?? -1,
         status,
         details: payload,
+        retryAfter,
     })
 }
 

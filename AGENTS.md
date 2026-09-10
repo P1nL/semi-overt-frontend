@@ -1,15 +1,22 @@
 # AGENTS.md
 
+## Repository boundary
+
+- This is the local microservices demo: `D:\works\semi-overt-frontend`, remote `P1nL/semi-overt-frontend`.
+- The production frontend is separate: `D:\works\semi-overt`, remote `P1nL/semi-overt`. Do not modify, push to, or deploy it as part of demo work without an explicit user request.
+- The demo backend is `D:\works\semi-overt-backend`; the local gateway listens on `127.0.0.1:18080`.
+- Never add production credentials or production release workflows here. Shared fixes require selective, reviewed synchronization.
+
 ## Commands
 
 ```sh
-npm run dev           # Vite dev server (proxies /api and /static → localhost:8080)
+npm run dev           # Demo on 127.0.0.1:15173; /api and /static → 127.0.0.1:18080
 npm run build         # Type-check via vue-tsc, then Vite production build
 npm run preview       # Serve the dist/ output locally
 npm run generate:api  # Generate TS types from OpenAPI specs (see API codegen below)
 ```
 
-No test runner is configured. No lint script exists in `package.json`.  
+Use `npm run test:auth-session` and `npm run test:s3-frontend` for Node's built-in tests. No lint script exists in `package.json`.
 Type-check is embedded in `build`; run `npx vue-tsc --noEmit` to type-check without building.
 
 ---
@@ -90,7 +97,7 @@ Route meta fields (all optional):
 ## API Layer
 
 ### Base URL
-Default: `/api/v1` (proxied to `http://localhost:8080` in dev via `vite.config.ts`).  
+Default: `/api/v1` (proxied to `http://127.0.0.1:18080` in dev via `vite.config.ts`).
 Override with `VITE_API_BASE_URL` env var.
 
 ### Request flow
@@ -192,7 +199,7 @@ Don't add logic inside them without a matching feature spec.
 
 ## Git / Repo Notes
 
-- Push uses SSH (not HTTPS). Ensure SSH key is configured before `git push`.
+- The demo origin is `https://github.com/P1nL/semi-overt-frontend.git`. Verify the push target before pushing.
 - `.github/workflows/frontend-ci.yml` runs `npm ci` and `npm run build` for relevant pull requests, pushes to `main`, and manual dispatches.
-- The public frontend repository must not contain production SSH secrets. Production frontend deployment is orchestrated from the private `P1nL/semi-overt-springboot` repository.
+- No production SSH secrets or release dispatches belong here. Production deployment continues to fetch `P1nL/semi-overt` from the private `P1nL/semi-overt-springboot` workflow.
 - No pre-commit hook is configured; run `npm run build` locally before pushing when practical.

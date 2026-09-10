@@ -16,6 +16,7 @@ import type {
 } from '@/shared/types/api'
 import { resolveAssetUrl } from '@/shared/utils/asset'
 import { normalizeBackendDateTime } from '@/shared/utils/dateTime'
+import { parseOptionalNonnegativeSafeInteger } from './contract'
 
 export interface BackendAuthResp {
     token: string
@@ -30,6 +31,8 @@ export interface BackendAuthResp {
 interface BackendArticleResp {
     id?: number
     articleId?: number
+    version?: number | null
+    submissionId?: string | null
     authorId?: number | null
     title?: string | null
     content?: string | null
@@ -294,6 +297,8 @@ export function normalizeProfileDto(
 export function normalizeArticleDetailDto(raw: BackendArticleDetailResp): ArticleDetailRespDto & { draftVisible: boolean } {
     return {
         id: getArticleId(raw),
+        version: parseOptionalNonnegativeSafeInteger(raw.version, 'article.version'),
+        submissionId: raw.submissionId?.trim() || null,
         title: raw.title ?? null,
         content: raw.content ?? '',
         summary: raw.summary ?? null,

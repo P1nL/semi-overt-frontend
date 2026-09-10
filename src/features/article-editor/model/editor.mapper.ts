@@ -56,7 +56,10 @@ export function mapArticleDetailVmToEditorFormValues(article: ArticleDetailVm): 
     }
 }
 
-export function mapEditorFormToDraftPayload(form: EditorFormValues): EditorDraftPayload {
+export function mapEditorFormToDraftPayload(
+    form: EditorFormValues,
+    version?: number | null,
+): EditorDraftPayload {
     const stats = buildEditorStats(form.content, form.title)
 
     return {
@@ -67,6 +70,7 @@ export function mapEditorFormToDraftPayload(form: EditorFormValues): EditorDraft
         coverUrl: form.coverUrl.trim(),
         coverColor: form.coverColor.trim(),
         clientWordCount: stats.wordCount,
+        ...(typeof version === 'number' && Number.isSafeInteger(version) && version >= 0 ? { version } : {}),
     }
 }
 
@@ -77,6 +81,8 @@ export function mapSavedEditorFormToArticleDetailVm(
 ): ArticleDetailVm {
     return mapArticleDetailDtoToVm({
         id: current.id,
+        version: response.version ?? current.version ?? undefined,
+        submissionId: current.submissionId,
         title: form.title.trim() || null,
         content: form.content || '',
         summary: form.summary.trim() || null,

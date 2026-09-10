@@ -213,6 +213,8 @@ export function mapArticleDetailDtoToVm(dto: ArticleDetailEntityDto): ArticleDet
 
     return {
         id: dto.id,
+        version: dto.version ?? null,
+        submissionId: dto.submissionId?.trim() || null,
         title,
         rawTitle,
         content: dto.content,

@@ -121,6 +121,7 @@ export interface SaveDraftReqDto {
     coverUrl?: string | null
     coverColor?: string | null
     clientWordCount?: number
+    version?: number
 }
 
 export interface SaveDraftRespDto {
@@ -130,6 +131,7 @@ export interface SaveDraftRespDto {
     durationCategory: 'QUICK' | 'SHORT' | 'DEEP' | string
     status: 'DRAFT' | 'RETURNED' | string
     draftVisible: boolean
+    version?: number
 }
 
 export interface DraftItemRespDto {
@@ -144,6 +146,8 @@ export interface DraftItemRespDto {
 
 export interface ArticleDetailRespDto {
     id: number
+    version?: number
+    submissionId?: string | null
     title: string | null
     content: string
     summary: string | null
@@ -166,11 +170,17 @@ export interface ArticleDetailRespDto {
 export interface SubmitArticleRespDto {
     status: 'PENDING' | string
     submitCount: number
+    submissionId?: string | null
+    version?: number
     lastSubmittedAt: string
+    updatedAt?: string | null
 }
 
 export interface CancelReviewRespDto {
     status: 'DRAFT' | string
+    submissionId?: string | null
+    version?: number
+    updatedAt?: string | null
 }
 
 export interface AdminDeleteArticleRespDto {
@@ -205,11 +215,26 @@ export interface PendingReviewItemDto {
 export interface ReviewActionReqDto {
     action: 'APPROVE' | 'RETURN' | 'REJECT'
     reason?: string
+    decisionId: string
+    submissionId?: string
+    expectedVersion?: number
 }
 
 export interface ReviewActionRespDto {
+    decisionId: string
+    state?: 'FINAL' | string
     status: 'APPROVED' | 'RETURNED' | 'REJECTED' | string
     reviewedAt: string
+    updatedAt?: string | null
+    version?: number
+}
+
+export interface ReviewDecisionStatusRespDto {
+    state: 'PROCESSING' | 'FINAL' | 'CONFLICT' | string
+    decisionId: string
+    status?: 'APPROVED' | 'RETURNED' | 'REJECTED' | string | null
+    updatedAt?: string | null
+    version?: number
 }
 
 export interface ReviewLogRespDto {
