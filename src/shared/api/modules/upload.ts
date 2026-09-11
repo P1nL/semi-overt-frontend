@@ -7,7 +7,7 @@ export interface UploadImagePayload {
     file: File
     bizType: UploadBizType
     articleId?: number | string
-    /** AVATAR/COVER 场景：旧文件访问 URL，上传成功后后端自动删除旧文件 */
+    /** 兼容字段；客户端 URL 不能证明所有权，演示后端不会据此自动删除旧文件。 */
     oldUrl?: string
 }
 
