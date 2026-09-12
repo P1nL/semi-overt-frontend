@@ -13,6 +13,7 @@ import { ReviewActionBar, type ReviewActionResult } from '@/features/review-acti
 import { useReviewLogsQuery } from '@/entities/queries'
 import { EmptyState } from '@/shared/components/base'
 import { SectionHeader } from '@/shared/components/layout'
+import { ARTICLE_STATUS } from '@/shared/constants/article'
 import { REVIEW_AUTO_REFRESH_INTERVAL_MS } from '@/shared/constants/review'
 import { setDocumentTitle } from '@/shared/utils/documentTitle'
 import { getErrorMessage } from '@/shared/utils/error'
@@ -35,6 +36,11 @@ const reviewSummaryText = computed(() =>
 )
 const reviewSummaryCountText = computed(() =>
   article.value ? `${Array.from(reviewSummaryText.value).length} 字` : '',
+)
+const articleRefreshIntervalMs = computed(() =>
+  article.value?.status.value === ARTICLE_STATUS.PENDING
+    ? REVIEW_AUTO_REFRESH_INTERVAL_MS
+    : null,
 )
 let previousBodyOverflow = ''
 
@@ -149,7 +155,7 @@ function onLoaded(value: ArticleDetailVm) {
               <ArticleReader
                 :key="articleId"
                 :article-id="articleId"
-                :review-refresh-interval-ms="REVIEW_AUTO_REFRESH_INTERVAL_MS"
+                :review-refresh-interval-ms="articleRefreshIntervalMs"
                 @loaded="onLoaded"
               />
             </section>

@@ -50,6 +50,13 @@ export function resolveDurationCategory(wordCount: number): ArticleDurationCateg
     return ARTICLE_DURATION_CATEGORY.DEEP
 }
 
+export function isDraftBoxStatus(status?: string | null): boolean {
+    const normalizedStatus = status?.toUpperCase()
+    return normalizedStatus === ARTICLE_STATUS.DRAFT
+        || normalizedStatus === ARTICLE_STATUS.PENDING
+        || normalizedStatus === ARTICLE_STATUS.RETURNED
+}
+
 export function canEditArticle(status?: string | null): boolean {
     return status === ARTICLE_STATUS.DRAFT || status === ARTICLE_STATUS.RETURNED
 }

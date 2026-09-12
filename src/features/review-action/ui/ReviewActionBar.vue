@@ -216,9 +216,6 @@ async function refreshReviewRelatedData(articleIdStr: string) {
         ]
       : []),
     queryClient.invalidateQueries({
-      queryKey: queryKeys.articleDetail(articleIdStr),
-    }),
-    queryClient.invalidateQueries({
       queryKey: queryKeys.reviewLogs(articleIdStr),
     }),
   ])
@@ -355,10 +352,19 @@ async function submitAction(action: ReviewActionValue) {
       }
     })
 
-    await refreshReviewRelatedData(articleIdStr)
-
     emit('acted', result)
     resetInteractionState()
+    toast.success(
+      action === REVIEW_ACTION.APPROVE
+        ? '文章已通过审核'
+        : action === REVIEW_ACTION.RETURN
+          ? '文章已退回修改'
+          : '文章已拒绝',
+    )
+
+    // The review command is already FINAL. Cache refresh is best-effort and
+    // must not turn a confirmed server-side success into an operation error.
+    void refreshReviewRelatedData(articleIdStr).catch(() => undefined)
   } catch (error) {
     const isConflict = error instanceof ApiBusinessError && error.code === 409
     const message = isConflict

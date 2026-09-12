@@ -449,7 +449,7 @@ async function loadArticleDetail() {
   saveError.value = ''
 
   try {
-    const vm = await editorStore.loadArticleDetail(workingArticleId.value)
+    const vm = await editorStore.loadArticleDetail(workingArticleId.value, true)
 
     const nextValues = applySummaryGuard(
       mapArticleDetailVmToEditorFormValues(vm),

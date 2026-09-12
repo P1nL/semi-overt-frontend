@@ -295,6 +295,13 @@ const saveStatus = computed(() => {
       text: `${currentStatusLabel.value}（只读）`,
     }
   }
+  if (currentStatus.value === ARTICLE_STATUS.RETURNED) {
+    return {
+      dotColor: 'var(--color-warning)',
+      textColor: 'var(--color-warning)',
+      text: currentStatusLabel.value || '已退回',
+    }
+  }
   if (editorStore.dirty) {
     return { dotColor: 'var(--color-warning)', textColor: 'var(--color-text-faint)', text: '有未保存的更改' }
   }

@@ -136,3 +136,39 @@ test('editor save catch path does not clear dirty state or reload detail after 4
   assert.doesNotMatch(catchBlock, /dirty\s*=\s*false/)
   assert.doesNotMatch(catchBlock, /loadArticleDetail/)
 })
+
+
+test('draft box contains only DRAFT, PENDING, and RETURNED', async () => {
+  const article = await load('src/shared/utils/article.ts', {
+    '@/shared/constants/article': {
+      ARTICLE_DURATION_CATEGORY: { QUICK: 'QUICK', SHORT: 'SHORT', DEEP: 'DEEP' },
+      ARTICLE_STATUS: {
+        DRAFT: 'DRAFT',
+        PENDING: 'PENDING',
+        RETURNED: 'RETURNED',
+        REJECTED: 'REJECTED',
+        APPROVED: 'APPROVED',
+      },
+      ARTICLE_WORDS_PER_MINUTE: 300,
+    },
+  })
+
+  assert.equal(article.isDraftBoxStatus('DRAFT'), true)
+  assert.equal(article.isDraftBoxStatus('pending'), true)
+  assert.equal(article.isDraftBoxStatus('RETURNED'), true)
+  assert.equal(article.isDraftBoxStatus('REJECTED'), false)
+  assert.equal(article.isDraftBoxStatus('APPROVED'), false)
+  assert.equal(article.isDraftBoxStatus(undefined), false)
+})
+
+test('draft box loaders and status updates enforce the centralized visibility rule', async () => {
+  const feature = await source('src/features/draft-box/model/index.ts')
+  const store = await source('src/stores/draft.ts')
+
+  assert.match(feature, /draftList\.filter\(\(item\) => isDraftBoxStatus\(item\.status\)\)/)
+  assert.match(feature, /drafts\.filter\(\(item\) => isDraftBoxStatus\(item\.status\.value\)\)/)
+  assert.match(store, /response\.filter\(\(item\) => isDraftBoxStatus\(item\.status\)\)/)
+  assert.match(store, /if \(!isDraftBoxStatus\(status\)\)/)
+  assert.doesNotMatch(feature, /ARTICLE_STATUS\.REJECTED\]:/)
+  assert.doesNotMatch(store, /ARTICLE_STATUS\.REJECTED\]:/)
+})

@@ -5,7 +5,7 @@ import {
 import type { ArticleCardEntityDto } from '@/entities/article/model/article.types'
 import { ARTICLE_STATUS } from '@/shared/constants/article'
 import { articleApi } from '@/shared/api/modules/article'
-import { calcReadMinutes, resolveDurationCategory } from '@/shared/utils/article'
+import { calcReadMinutes, isDraftBoxStatus, resolveDurationCategory } from '@/shared/utils/article'
 import type { DraftItemRespDto } from '@/shared/types/api'
 import type {
   DraftBoxItem,
@@ -22,9 +22,8 @@ function toSortTimestamp(value?: string | null): number {
 
 const DRAFT_STATUS_PRIORITY: Record<string, number> = {
   [ARTICLE_STATUS.DRAFT]: 1,
-  [ARTICLE_STATUS.REJECTED]: 2,
-  [ARTICLE_STATUS.RETURNED]: 3,
-  [ARTICLE_STATUS.PENDING]: 4,
+  [ARTICLE_STATUS.RETURNED]: 2,
+  [ARTICLE_STATUS.PENDING]: 3,
 }
 
 function getDraftStatusPriority(status?: string | null): number {
@@ -94,7 +93,9 @@ function mapDraftDtoToCardDto(dto: {
 export async function loadDraftBoxItems(_username: string): Promise<DraftBoxLoadResult> {
   const draftList = await articleApi.getDraftList()
 
-  const items = dedupeDraftBoxItems(draftList.map(mapDraftItemToDraftBoxItem))
+  const items = dedupeDraftBoxItems(
+    draftList.filter((item) => isDraftBoxStatus(item.status)).map(mapDraftItemToDraftBoxItem),
+  )
 
   return {
     items,
@@ -104,7 +105,9 @@ export async function loadDraftBoxItems(_username: string): Promise<DraftBoxLoad
 }
 
 export function syncDraftStore(store: DraftStoreLike, drafts: DraftBoxItem[]) {
-  const dedupedDrafts = dedupeDraftBoxItems(drafts)
+  const dedupedDrafts = dedupeDraftBoxItems(
+    drafts.filter((item) => isDraftBoxStatus(item.status.value)),
+  )
 
   store.badgeCount = dedupedDrafts.length
   store.items = dedupedDrafts.map((item) =>

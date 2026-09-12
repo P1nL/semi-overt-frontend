@@ -53,6 +53,10 @@ export function useToast() {
         return id
     }
 
+    function success(message: string, options?: ShowToastOptions): number {
+        return show(UI_TOAST_TYPE.SUCCESS, message, options)
+    }
+
     function error(message: string, options?: ShowToastOptions): number {
         return show(UI_TOAST_TYPE.ERROR, message, options)
     }
@@ -66,6 +70,7 @@ export function useToast() {
     return {
         toasts,
         count,
+        success,
         error,
         remove,
         clear,

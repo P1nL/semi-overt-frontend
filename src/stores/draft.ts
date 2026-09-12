@@ -11,13 +11,12 @@ import {
 import type { ArticleCardEntityDto, ArticleCardVm, ArticleStatusVm } from '@/entities/article/model/article.types'
 import { articleApi } from '@/shared/api/modules/article'
 import type { DraftItemRespDto } from '@/shared/types/api'
-import { calcReadMinutes, resolveDurationCategory } from '@/shared/utils/article'
+import { calcReadMinutes, isDraftBoxStatus, resolveDurationCategory } from '@/shared/utils/article'
 
 const DRAFT_STATUS_PRIORITY: Record<string, number> = {
     [ARTICLE_STATUS.DRAFT]: 1,
-    [ARTICLE_STATUS.REJECTED]: 2,
-    [ARTICLE_STATUS.RETURNED]: 3,
-    [ARTICLE_STATUS.PENDING]: 4,
+    [ARTICLE_STATUS.RETURNED]: 2,
+    [ARTICLE_STATUS.PENDING]: 3,
 }
 
 function toSortTimestamp(value?: string | null): number {
@@ -152,7 +151,9 @@ export const useDraftStore = defineStore('draft', () => {
     const hasDrafts = computed(() => items.value.length > 0)
 
     function setItems(nextItems: ArticleCardVm[]) {
-        const dedupedItems = dedupeDraftCards(nextItems)
+        const dedupedItems = dedupeDraftCards(
+            nextItems.filter((item) => isDraftBoxStatus(item.status?.value)),
+        )
         items.value = dedupedItems
         badgeCount.value = dedupedItems.length
         initialized.value = true
@@ -179,7 +180,9 @@ export const useDraftStore = defineStore('draft', () => {
 
         try {
             const response = await articleApi.getDraftList()
-            const nextItems = dedupeDraftDtos(response).map((item) =>
+            const nextItems = dedupeDraftDtos(
+                response.filter((item) => isDraftBoxStatus(item.status)),
+            ).map((item) =>
                 mapArticleCardDtoToVm(
                     toDraftCardDto({
                         id: item.id,
@@ -199,6 +202,12 @@ export const useDraftStore = defineStore('draft', () => {
     }
 
     function updateStatusById(articleId: number | string, status: string, updatedAt?: string | null): boolean {
+        if (!isDraftBoxStatus(status)) {
+            const matched = items.value.some((item) => String(item.id) === String(articleId))
+            if (matched) removeById(articleId)
+            return matched
+        }
+
         let matched = false
         const displayDate = toDisplayDate(updatedAt) ?? null
 
