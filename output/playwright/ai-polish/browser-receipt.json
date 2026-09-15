@@ -1,0 +1,102 @@
+{
+  "staleBlocked": true,
+  "refreshedUsesLatest": true,
+  "freshCanApply": true,
+  "stableAnchor": true,
+  "regenerateChanged": true,
+  "undoRestored": true,
+  "escapeFocused": true,
+  "outsideClosed": true,
+  "cancelIgnored": true,
+  "errorOutside": true,
+  "buttonsPinned": true,
+  "bubbleTextOnly": true,
+  "mobile": {
+    "rect": {
+      "x": 16,
+      "y": 16,
+      "width": 358,
+      "height": 520,
+      "top": 16,
+      "right": 374,
+      "bottom": 536,
+      "left": 16
+    },
+    "viewport": [
+      390,
+      844
+    ],
+    "scrollable": true,
+    "buttons": [
+      {
+        "x": 259.40625,
+        "y": 475,
+        "width": 44,
+        "height": 44,
+        "top": 475,
+        "right": 303.40625,
+        "bottom": 519,
+        "left": 259.40625
+      },
+      {
+        "x": 313,
+        "y": 475,
+        "width": 44,
+        "height": 44,
+        "top": 475,
+        "right": 357,
+        "bottom": 519,
+        "left": 313
+      }
+    ]
+  },
+  "reduced": {
+    "duration": "0s",
+    "transform": "none"
+  },
+  "motion": [
+    {
+      "time": 39185.59999999404,
+      "transform": "matrix(0.34732, 0, 0, 0.375698, 0, 0)",
+      "opacity": "0.0693302",
+      "origin": "-40.0625px 260px"
+    },
+    {
+      "time": 39300.79999999702,
+      "transform": "matrix(0.909751, 0, 0, 0.913675, 0, 0)",
+      "opacity": "0.826644"
+    },
+    {
+      "time": 39818.79999999702,
+      "transform": "none",
+      "opacity": "1"
+    }
+  ],
+  "errors": [],
+  "provider": "browser-intercepted local fixture; not a real model call",
+  "anchorPositions": {
+    "hover": 340,
+    "rest": 340
+  },
+  "finalDetails": {
+    "textOnly": true,
+    "buttons": [
+      {
+        "text": "",
+        "label": "重新生成"
+      },
+      {
+        "text": "",
+        "label": "确认应用"
+      }
+    ],
+    "scrollable": true
+  },
+  "finalMobile": {
+    "x": 16,
+    "y": 16,
+    "width": 358,
+    "height": 520
+  },
+  "finalErrors": []
+}

@@ -58,6 +58,7 @@ import { getErrorMessage } from '@/shared/utils/error'
 import { useEditorStore } from '@/stores/editor'
 
 import { ResizableImage } from './editor-resizable-image'
+import EditorAiPolish from './EditorAiPolish.vue'
 
 const props = withDefaults(
   defineProps<{
@@ -1225,6 +1226,7 @@ defineExpose({
             </span>
             <span class="editor-insert-label">分割线</span>
           </button>
+          <EditorAiPolish :editor="contentEditor" :disabled="disabledState" :article-key="workingArticleId" />
         </div>
       </aside>
 
@@ -1281,6 +1283,7 @@ defineExpose({
               </span>
               <span class="editor-insert-label">分割线</span>
             </button>
+            <EditorAiPolish :editor="contentEditor" :disabled="disabledState" :article-key="workingArticleId" />
           </aside>
 
           <section class="editor-canvas-shell">

@@ -256,6 +256,20 @@ export interface UploadImageRespDto {
 
 export type UploadBizType = 'AVATAR' | 'COVER' | 'ARTICLE_IMAGE'
 
+/** POST /articles/ai-polish: ephemeral plain-text leaves, not a document write. */
+export interface ArticlePolishSegmentDto {
+    id: string
+    text: string
+}
+
+export interface ArticlePolishReqDto {
+    segments: ArticlePolishSegmentDto[]
+}
+
+export interface ArticlePolishRespDto {
+    segments: ArticlePolishSegmentDto[]
+}
+
 export interface SearchArticleRespDto extends PageRespDto<ArticleCardDto> {
     keyword: string
 }
